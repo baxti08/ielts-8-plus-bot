@@ -1,0 +1,19 @@
+{$ADMIN_DOMAIN} {
+	# Bot webhook lives on the SAME domain/cert as the admin panel, under
+	# /webhook/<secret>, so we only need one DNS record + one TLS cert for
+	# the whole droplet. Telegram POSTs here; everything else goes to admin.
+	handle /webhook/* {
+		reverse_proxy bot:8081
+	}
+
+	handle {
+		reverse_proxy admin:8000
+	}
+
+	encode gzip
+
+	log {
+		output stdout
+		format console
+	}
+}

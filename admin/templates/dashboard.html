@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Umumiy statistika</h1>
+<div class="grid">
+  <div class="card"><div class="stat">{{ total_users }}</div><div class="stat-label">Jami foydalanuvchilar</div></div>
+  <div class="card"><div class="stat">{{ verified_users }}</div><div class="stat-label">Tasdiqlangan (4 kanalga a'zo)</div></div>
+  <div class="card"><div class="stat">{{ unverified_count }}</div><div class="stat-label">Hali tasdiqlanmagan</div></div>
+  <div class="card"><div class="stat">{{ total_valid_referrals }}</div><div class="stat-label">Jami valid referrallar</div></div>
+  <div class="card"><div class="stat">{{ verified_zero_referrals }}</div><div class="stat-label">Tasdiqlangan, lekin 0 referral</div></div>
+</div>
+
+<h2 class="section-title">Bo'limlar bo'yicha ochilganlar</h2>
+<div class="grid">
+  {% for name, count in section_counts.items() %}
+  <div class="card"><div class="stat">{{ count }}</div><div class="stat-label">{{ name }}</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

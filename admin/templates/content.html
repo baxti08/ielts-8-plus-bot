@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Content{% endblock %}
+{% block content %}
+<a id="top"></a>
+<h1>Kontent boshqaruvi</h1>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+<div class="card">
+  <h2>Kun qo'shish / tahrirlash</h2>
+  <form method="post" action="/content/save">
+    <div class="row">
+      <select name="section" required>
+        {% for s in sections %}
+        <option value="{{ s.value }}" {% if edit_values and edit_values.section == s.value %}selected{% endif %}>{{ s.display_name }} (1-{{ days_per_section[s] }})</option>
+        {% endfor %}
+      </select>
+      <input type="number" name="day_number" placeholder="Kun raqami" min="1" required style="width:120px" value="{{ edit_values.day_number if edit_values else '' }}">
+    </div>
+    <div class="row">
+      <input type="text" name="message_ids" placeholder="Manba kanaldagi message id(lar), vergul bilan: 101,102,103" style="width:100%" required value="{{ edit_values.message_ids if edit_values else '' }}">
+    </div>
+    <button type="submit">Saqlash</button>
+    {% if edit_values %}<a href="/content" class="secondary" style="align-self:center;">Bekor qilish</a>{% endif %}
+  </form>
+  <p style="color:#9aa2ad;font-size:13px;margin-top:8px;">
+    Har bir bo'lim o'zining manba kanaliga bog'langan (.env da sozlangan). Message id — bu darsning video/pdf/html
+    xabarlarining ID raqamlari, xabarga bosib "Copy Message Link" orqali topiladi (havoladagi oxirgi raqam).
+  </p>
+</div>
+
+{% for s in sections %}
+<h2 class="section-title">{{ s.display_name }}</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>Kun</th><th>Message ID(lar)</th><th>Yangilangan</th><th></th></tr></thead>
+    <tbody>
+      {% for row in by_section[s.value] %}
+      <tr>
+        <td>{{ row.day_number }}</td>
+        <td>{{ row.message_ids }}</td>
+        <td>{{ row.updated_at.strftime("%Y-%m-%d %H:%M") }}</td>
+        <td>
+          <a href="/content?edit_section={{ s.value }}&edit_day={{ row.day_number }}#top" style="text-decoration:none;">
+            <button type="button" class="secondary" style="border-color:#333844;">Tahrirlash</button>
+          </a>
+          <form class="inline" method="post" action="/content/{{ row.id }}/delete" onsubmit="return confirm('O\'chirilsinmi?')">
+            <button type="submit" class="danger">O'chirish</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" style="color:#9aa2ad;">Hali kontent qo'shilmagan</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endfor %}
+{% endblock %}

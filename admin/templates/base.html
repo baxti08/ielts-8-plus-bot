@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}IELTS 8+ Bot Admin{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  {% if admin %}
+  <div class="topbar">
+    <strong>IELTS 8+ Bot Admin</strong>
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/content">Content</a>
+      <a href="/users">Users</a>
+      <a href="/broadcast">Broadcast</a>
+      <form class="inline" method="post" action="/logout" style="display:inline">
+        <button type="submit" class="secondary">Logout ({{ admin }})</button>
+      </form>
+    </nav>
+  </div>
+  {% endif %}
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

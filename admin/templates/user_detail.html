@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}User {{ user.telegram_id }}{% endblock %}
+{% block content %}
+<h1>Foydalanuvchi: {{ user.full_name }} ({{ user.telegram_id }})</h1>
+
+<div class="card">
+  <p>Username: {{ user.username or "-" }}</p>
+  <p>Ism: {{ user.full_name }}</p>
+  <p>Telegram ID: {{ user.telegram_id }}</p>
+  <p>Tasdiqlangan: {% if user.is_verified_member %}<span class="badge green">Ha</span>{% else %}<span class="badge red">Yo'q</span>{% endif %}</p>
+  <p>Birinchi /start bosgan vaqti: {{ user.joined_at.strftime("%Y-%m-%d %H:%M") }}</p>
+  <p>/start necha marta bosilgan: {{ user.start_count }}</p>
+  <p>Jami valid referrallar: {{ progress.total_valid }}</p>
+  <p>Pooldagi (bo'lim tanlanmagan): {{ progress.pool }}</p>
+  <p>Ochilgan bo'limlar: {% for s in unlocked %}<span class="badge green">{{ s.display_name }}</span> {% else %}yo'q{% endfor %}</p>
+</div>
+
+<div class="card">
+  <h2>Foydalanuvchiga xabar yuborish</h2>
+  {% if message_result == "sent" %}
+    <p style="color:#63d17c;">✅ Xabar yuborildi.</p>
+  {% elif message_result and message_result.startswith("failed:") %}
+    <p class="error">❌ Yuborilmadi: {{ message_result[7:] }}</p>
+  {% endif %}
+  <form method="post" action="/users/{{ user.telegram_id }}/message">
+    <div class="row">
+      <textarea name="text" placeholder="Xabar matni (HTML formatlash qo'llab-quvvatlanadi)" required></textarea>
+    </div>
+    <button type="submit">Yuborish</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Qo'lda ball qo'shish / bekor qilish</h2>
+  <form method="post" action="/users/{{ user.telegram_id }}/adjust">
+    <div class="row">
+      <select name="action">
+        <option value="add">Qo'shish</option>
+        <option value="revoke">Bekor qilish</option>
+      </select>
+      <input type="number" name="count" min="1" value="1" style="width:100px">
+      <button type="submit">Bajarish</button>
+    </div>
+  </form>
+  <p style="color:#9aa2ad;font-size:13px;">
+    Qo'shilgan ballar oddiy referral sifatida hisoblanadi (avtomatik bo'lim tanlash promptini ham ishga tushirishi mumkin).
+    Bekor qilish eng eski valid referrallarni bekor qiladi va agar shu sabab bo'lim 3 tadan kamayib qolsa, u qayta yopiladi.
+  </p>
+</div>
+
+<h2 class="section-title">Yuborilgan referrallar</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>Referred ID</th><th>Fresh</th><th>Valid</th><th>Bo'lim</th><th>Sana</th></tr></thead>
+    <tbody>
+      {% for r in sent_referrals %}
+      <tr>
+        <td>{{ r.referred_id }}</td>
+        <td>{{ "✅" if r.was_fresh_at_landing else "❌" }}</td>
+        <td>{{ "✅" if r.is_valid else "❌" }}</td>
+        <td>{{ r.section_assigned.value if r.section_assigned else "-" }}</td>
+        <td>{{ r.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="color:#9aa2ad;">Hali referral yo'q</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

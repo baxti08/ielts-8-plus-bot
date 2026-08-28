@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Broadcast{% endblock %}
+{% block content %}
+<h1>Xabar yuborish (Broadcast)</h1>
+
+{% if request.query_params.get("error") == "already_running" %}
+<p class="error">⚠️ Hozir allaqachon bitta broadcast ishlamoqda. U tugagunicha yangisini boshlab bo'lmaydi.</p>
+{% endif %}
+
+<div class="card">
+  {% if running %}
+  <p style="color:#9aa2ad;">
+    🔄 Hozir #{{ running.id }} ({{ running.segment }}) ishlamoqda — {{ running.sent_count }}/{{ running.total_targets }}.
+    Yangi broadcast shu tugagach boshlanadi.
+  </p>
+  {% else %}
+  <form method="post" action="/broadcast/send">
+    <div class="row">
+      <select name="segment">
+        {% for key, label in segments.items() %}
+        <option value="{{ key }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="row">
+      <textarea name="message_text" placeholder="Xabar matni (HTML formatlash qo'llab-quvvatlanadi)" required></textarea>
+    </div>
+    <button type="submit" onclick="return confirm('Xabar yuborishni boshlaysizmi?')">Yuborishni boshlash</button>
+  </form>
+  {% endif %}
+</div>
+
+<h2 class="section-title">Tarix</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>ID</th><th>Segment</th><th>Holat</th><th>Yuborildi / Jami</th><th>Xato</th><th>Boshlandi</th></tr></thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td>{{ log.id }}</td>
+        <td>{{ log.segment }}</td>
+        <td>
+          {% if log.status == "done" %}<span class="badge green">done</span>
+          {% elif log.status == "failed" %}<span class="badge red">failed</span>
+          {% else %}<span class="badge">{{ log.status }}</span>{% endif %}
+        </td>
+        <td>{{ log.sent_count }} / {{ log.total_targets }}</td>
+        <td>{{ log.failed_count }}</td>
+        <td>{{ log.started_at.strftime("%Y-%m-%d %H:%M") if log.started_at else "-" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="color:#9aa2ad;">Hali broadcast yo'q</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p style="color:#9aa2ad;font-size:13px;margin-top:8px;">Sahifani yangilab progress'ni kuzatishingiz mumkin.</p>
+</div>
+{% endblock %}

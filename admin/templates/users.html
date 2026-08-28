@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<h1>Foydalanuvchilar <span style="color:#9aa2ad;font-weight:400;font-size:14px;">(jami: {{ total_users }})</span></h1>
+<div class="card">
+  <form method="get" action="/users">
+    <div class="row">
+      <input type="text" name="q" value="{{ q }}" placeholder="Telegram ID yoki username" style="width:300px">
+      <button type="submit">Qidirish</button>
+      {% if q %}<a href="/users" class="secondary" style="align-self:center;">Tozalash</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+{% if showing_capped %}
+<p style="color:#9aa2ad;font-size:13px;">Eng so'nggi {{ limit }} ta foydalanuvchi ko'rsatilmoqda. Kerakli foydalanuvchini topish uchun qidiruvdan foydalaning.</p>
+{% endif %}
+
+{% if results %}
+<div class="card">
+  <table>
+    <thead><tr><th>ID</th><th>Username</th><th>Ism</th><th>Tasdiqlangan</th><th>Start soni</th><th>Birinchi start</th></tr></thead>
+    <tbody>
+      {% for u in results %}
+      <tr>
+        <td><a href="/users/{{ u.telegram_id }}">{{ u.telegram_id }}</a></td>
+        <td>{{ u.username or "-" }}</td>
+        <td>{{ u.full_name }}</td>
+        <td>
+          {% if u.is_verified_member %}<span class="badge green">Ha</span>{% else %}<span class="badge red">Yo'q</span>{% endif %}
+        </td>
+        <td>{{ u.start_count }}</td>
+        <td>{{ u.joined_at.strftime("%Y-%m-%d %H:%M") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% elif q %}
+<p style="color:#9aa2ad;">Hech narsa topilmadi.</p>
+{% else %}
+<p style="color:#9aa2ad;">Hali foydalanuvchi yo'q.</p>
+{% endif %}
+{% endblock %}

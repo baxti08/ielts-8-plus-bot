@@ -1,0 +1,28 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY common ./common
+COPY admin ./admin
+COPY alembic ./alembic
+COPY alembic.ini .
+
+EXPOSE 8000
+
+# Runs the migration on every container start (idempotent -- no-ops if
+# already at head) before starting the web server. On the DigitalOcean
+# docker-compose setup this duplicates the dedicated `migrate` service,
+# which is harmless; on Railway (no equivalent one-off service) this is
+# what actually applies migrations, since Railway's internal DB hostname
+# isn't reachable from outside its network for a local `railway run`.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn admin.main:app --host 0.0.0.0 --port 8000"]
