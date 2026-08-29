@@ -48,7 +48,7 @@ GATED_SECTIONS: List[Section] = [Section.listening, Section.speaking, Section.wr
 
 DAYS_PER_SECTION = {
     Section.reading: 20,
-    Section.multilevel: 28,
+    Section.multilevel: 20,
     Section.listening: 10,
     Section.speaking: 10,
     Section.writing: 10,
