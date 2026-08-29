@@ -11,12 +11,14 @@ from bot.services.membership import check_all_required, missing_channels
 from bot.services.menu_render import send_main_menu
 from common.db.models import User
 from common.referral_logic import (
+    REFERRALS_PER_SLOT,
     activate_referral,
     get_or_create_user,
     get_referral_for_referred,
     record_referral_landing,
     referral_progress,
     should_prompt_section_choice,
+    unassigned_pool_count,
 )
 
 logger = logging.getLogger(__name__)
@@ -83,6 +85,7 @@ async def cb_gate_check(callback: CallbackQuery, session: AsyncSession, bot: Bot
         referral = await get_referral_for_referred(session, user_id)
         if referral is not None:
             was_valid_before = referral.is_valid
+            pool_before = await unassigned_pool_count(session, referrer_id=referral.referrer_id)
             await activate_referral(session, referral)
             await session.flush()
             referrer_id = referral.referrer_id
@@ -107,11 +110,19 @@ async def cb_gate_check(callback: CallbackQuery, session: AsyncSession, bot: Bot
                 except Exception:
                     pass  # referrer may have blocked the bot -- don't let this break verification
 
-            available = await should_prompt_section_choice(session, referrer_id)
-            if available:
-                from bot.handlers.referral import send_section_choice_prompt
+                # Only fire the "choose a section" prompt at the exact moment
+                # the pool crosses the threshold (e.g. 2 -> 3), not on every
+                # subsequent referral that lands while an earlier batch is
+                # still sitting unanswered -- otherwise a burst of referrals
+                # arriving close together spams the same prompt repeatedly.
+                pool_after = await unassigned_pool_count(session, referrer_id)
+                crossed_threshold = pool_before < REFERRALS_PER_SLOT <= pool_after
+                if crossed_threshold:
+                    available = await should_prompt_section_choice(session, referrer_id)
+                    if available:
+                        from bot.handlers.referral import send_section_choice_prompt
 
-                await send_section_choice_prompt(bot, referrer_id, available)
+                        await send_section_choice_prompt(bot, referrer_id, available)
 
     if now_verified:
         await callback.answer("✅ Tabriklaymiz!")

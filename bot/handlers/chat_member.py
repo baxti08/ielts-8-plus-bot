@@ -16,10 +16,12 @@ from bot.services.membership import MEMBER_STATUSES, is_fully_verified
 from common.config import get_settings
 from common.db.models import User
 from common.referral_logic import (
+    REFERRALS_PER_SLOT,
     activate_referral,
     get_referral_for_referred,
     referral_progress,
     should_prompt_section_choice,
+    unassigned_pool_count,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,6 +78,7 @@ async def on_chat_member_update(event: ChatMemberUpdated, session: AsyncSession,
             referral = await get_referral_for_referred(session, target_user_id)
             if referral is not None:
                 was_valid_before = referral.is_valid
+                pool_before = await unassigned_pool_count(session, referrer_id=referral.referrer_id)
                 await activate_referral(session, referral)
                 await session.flush()
                 referrer_id = referral.referrer_id
@@ -99,8 +102,14 @@ async def on_chat_member_update(event: ChatMemberUpdated, session: AsyncSession,
                     except Exception:
                         pass
 
-                available = await should_prompt_section_choice(session, referrer_id)
-                if available:
-                    from bot.handlers.referral import send_section_choice_prompt
+                    # Only fire the prompt at the exact moment the pool
+                    # crosses the threshold -- see matching comment in
+                    # bot/handlers/start.py.
+                    pool_after = await unassigned_pool_count(session, referrer_id)
+                    crossed_threshold = pool_before < REFERRALS_PER_SLOT <= pool_after
+                    if crossed_threshold:
+                        available = await should_prompt_section_choice(session, referrer_id)
+                        if available:
+                            from bot.handlers.referral import send_section_choice_prompt
 
-                    await send_section_choice_prompt(bot, referrer_id, available)
+                            await send_section_choice_prompt(bot, referrer_id, available)
