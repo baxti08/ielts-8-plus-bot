@@ -34,9 +34,13 @@ def main_menu(profile_name: str) -> str:
     )
 
 
-def locked_section_header(section_display_name: str) -> str:
-    label = section_display_name if section_display_name.endswith("darslari") else f"{section_display_name} darslari"
-    return f"<b>🔒 {label}</b> hali siz uchun yopiq.\n\nOchish uchun 3 ta do'stingizni taklif qiling."
+def locked_section_header(section: "Section") -> str:
+    from common.db.models import DAYS_PER_SECTION  # local import to avoid a circular import at module load time
+
+    name = section.display_name
+    if section in DAYS_PER_SECTION and not name.endswith("darslari"):
+        name = f"{name} darslari"
+    return f"<b>🔒 {name}</b> hali siz uchun yopiq.\n\nOchish uchun 3 ta do'stingizni taklif qiling."
 
 
 def referral_pitch_block(current: int, target: int, squares: str) -> str:

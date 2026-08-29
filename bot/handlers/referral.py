@@ -76,7 +76,7 @@ async def cb_referral_progress(callback: CallbackQuery, session: AsyncSession):
 
 
 async def show_locked_section(message: Message, session: AsyncSession, section: Section) -> None:
-    await message.answer(texts.locked_section_header(section.display_name))
+    await message.answer(texts.locked_section_header(section))
     text = await _pitch_text(session, message.from_user.id)
     await message.answer(text, reply_markup=locked_section_keyboard())
 
