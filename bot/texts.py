@@ -74,6 +74,18 @@ def referral_forward_hint() -> str:
     )
 
 
+def friend_joined_notice(referred_name: str, current: int, target: int, squares_str: str) -> str:
+    import html
+
+    safe_name = html.escape(referred_name) if referred_name else ""
+    who = f" <b>{safe_name}</b>" if safe_name else ""
+    return (
+        f"👥 Do'stingiz{who} siz orqali qo'shildi!\n\n"
+        f"📊 Natija: <b>{current}/{target}</b>\n"
+        f"{squares_str}"
+    )
+
+
 def my_result_in_progress(n: int, target: int, squares: str) -> str:
     return (
         "📊 <b>Mening natijam</b>\n\n"

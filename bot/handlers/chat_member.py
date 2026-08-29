@@ -11,12 +11,14 @@ from aiogram.types import ChatMemberUpdated
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import texts
+from bot.keyboards.inline import gate_channels_keyboard
 from bot.services.membership import MEMBER_STATUSES, is_fully_verified
 from common.config import get_settings
 from common.db.models import User
 from common.referral_logic import (
     activate_referral,
     get_referral_for_referred,
+    referral_progress,
     revoke_referral,
     should_prompt_section_choice,
 )
@@ -26,6 +28,7 @@ router = Router(name="chat_member")
 settings = get_settings()
 
 REQUIRED_USERNAMES = {c["username"] for c in settings.required_channels}
+_CHANNEL_BY_USERNAME = {c["username"]: c for c in settings.required_channels}
 
 
 @router.chat_member()
@@ -49,8 +52,13 @@ async def on_chat_member_update(event: ChatMemberUpdated, session: AsyncSession,
             user.is_verified_member = False
             user.last_membership_check = datetime.now(timezone.utc)
             await session.flush()
+            left_channel = _CHANNEL_BY_USERNAME.get(chat_username)
             try:
-                await bot.send_message(target_user_id, texts.left_channel_notice())
+                await bot.send_message(
+                    target_user_id,
+                    texts.left_channel_notice(),
+                    reply_markup=gate_channels_keyboard(channels=[left_channel] if left_channel else None),
+                )
             except Exception:
                 pass
 
@@ -79,6 +87,21 @@ async def on_chat_member_update(event: ChatMemberUpdated, session: AsyncSession,
                 await activate_referral(session, referral)
                 await session.flush()
                 referrer_id = referral.referrer_id
+
+                progress = await referral_progress(session, referrer_id)
+                try:
+                    await bot.send_message(
+                        referrer_id,
+                        texts.friend_joined_notice(
+                            event.new_chat_member.user.full_name,
+                            progress["in_progress"],
+                            progress["target"],
+                            texts.squares(progress["in_progress"], progress["target"]),
+                        ),
+                    )
+                except Exception:
+                    pass
+
                 available = await should_prompt_section_choice(session, referrer_id)
                 if available:
                     from bot.handlers.referral import send_section_choice_prompt
