@@ -5,6 +5,7 @@ BTN_LISTENING = "🎧 IELTS Listening"
 BTN_SPEAKING = "🗣️ IELTS Speaking"
 BTN_WRITING = "✍️ IELTS Writing"
 BTN_MULTILEVEL = "🔝 Multi-Level darslari"
+BTN_MORE_FEATURES = "⚡️ Ko'proq funksiyalar"
 BTN_REFERRAL_LINK = "🔗 Do'stlar uchun havola"
 BTN_MY_RESULT = "📊 Mening natijam"
 BTN_PRICES = "💰 Narxlar"
@@ -49,6 +50,7 @@ def main_menu_keyboard(unlocked_sections: set) -> ReplyKeyboardMarkup:
             KeyboardButton(text=label(BTN_WRITING, "writing")),
             KeyboardButton(text=label(BTN_MULTILEVEL, "multilevel")),
         ],
+        [KeyboardButton(text=BTN_MORE_FEATURES)],
         [KeyboardButton(text=BTN_REFERRAL_LINK)],
         [KeyboardButton(text=BTN_MY_RESULT), KeyboardButton(text=BTN_PRICES)],
         [KeyboardButton(text=BTN_RESULTS)],

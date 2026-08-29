@@ -24,8 +24,14 @@ def _parse_ids(raw: str) -> list[int]:
 
 @router.get("")
 async def list_content(request: Request, session: AsyncSession = Depends(get_session), admin: str = Depends(require_admin)):
+    # Only sections that use day-numbered lesson content belong on this page.
+    # speaking_recent/writing_ai_check are gated the same way but have their
+    # own dedicated flows (see bot/handlers/more_features.py) instead of
+    # admin-uploaded per-day content, so they're intentionally excluded here.
+    day_based_sections = [s for s in Section if s in DAYS_PER_SECTION]
+
     rows = (await session.scalars(select(Content).order_by(Content.section, Content.day_number))).all()
-    by_section: dict[str, list[Content]] = {s.value: [] for s in Section}
+    by_section: dict[str, list[Content]] = {s.value: [] for s in day_based_sections}
     for r in rows:
         by_section[r.section.value].append(r)
 
@@ -48,7 +54,7 @@ async def list_content(request: Request, session: AsyncSession = Depends(get_ses
             "request": request,
             "admin": admin,
             "by_section": by_section,
-            "sections": list(Section),
+            "sections": day_based_sections,
             "days_per_section": DAYS_PER_SECTION,
             "error": request.query_params.get("error"),
             "edit_values": edit_values,

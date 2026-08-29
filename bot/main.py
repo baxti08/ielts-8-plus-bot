@@ -9,7 +9,7 @@ from aiohttp import web
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from bot.handlers import admin_broadcast, chat_member, content, menu, referral, results_prices, start
+from bot.handlers import admin_broadcast, chat_member, content, menu, more_features, referral, results_prices, start
 from bot.middlewares.db_session import DbSessionMiddleware
 from bot.middlewares.membership_gate import MembershipGateMiddleware
 from bot.services.backup import run_daily_backup
@@ -40,6 +40,7 @@ def build_dispatcher() -> Dispatcher:
     dp.include_router(admin_broadcast.router)
     dp.include_router(menu.router)
     dp.include_router(referral.router)
+    dp.include_router(more_features.router)
     dp.include_router(content.router)
     dp.include_router(results_prices.router)
 

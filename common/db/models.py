@@ -27,6 +27,8 @@ class Section(str, enum.Enum):
     listening = "listening"
     speaking = "speaking"
     writing = "writing"
+    speaking_recent = "speaking_recent"
+    writing_ai_check = "writing_ai_check"
 
     @property
     def is_gated(self) -> bool:
@@ -40,11 +42,24 @@ class Section(str, enum.Enum):
             Section.listening: "IELTS Listening",
             Section.speaking: "IELTS Speaking",
             Section.writing: "IELTS Writing",
+            Section.speaking_recent: "🔥 Speaking Recent Questions",
+            Section.writing_ai_check: "🔥 Writing AI Check + Feedback",
         }[self]
 
 
-# The 4 sections a user can earn unlocks for, in the fixed prompt order.
-GATED_SECTIONS: List[Section] = [Section.listening, Section.speaking, Section.writing, Section.multilevel]
+# The 6 features a user can earn unlocks for, in the fixed prompt order.
+# speaking_recent and writing_ai_check are NOT day-numbered lesson content
+# like the other 4 -- they live under the "Ko'proq funksiyalar" menu instead
+# of the main reply keyboard, and have their own dedicated handlers in
+# bot/handlers/more_features.py rather than going through content_day_grid.
+GATED_SECTIONS: List[Section] = [
+    Section.listening,
+    Section.speaking,
+    Section.writing,
+    Section.multilevel,
+    Section.speaking_recent,
+    Section.writing_ai_check,
+]
 
 DAYS_PER_SECTION = {
     Section.reading: 20,

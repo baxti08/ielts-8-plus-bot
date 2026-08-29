@@ -32,6 +32,19 @@ class Settings(BaseSettings):
     channel_speaking_id: int
     channel_writing_id: int
 
+    # --- "Ko'proq funksiyalar" -> Speaking Recent Questions source channel ---
+    # Private channel holding the 3 "IELTS Recent Speaking Questions" books,
+    # bot must be admin. speaking_recent_book_message_ids is a comma-separated
+    # list of the 3 message ids to copy (in order) -- get these via
+    # Telegram Desktop/Web: right-click each message -> Copy Message Link ->
+    # the trailing number in https://t.me/c/<channel>/<message_id>.
+    channel_speaking_recent_id: int = -1004327951135
+    speaking_recent_book_message_ids: str = "2,3,4"
+
+    @property
+    def speaking_recent_book_message_id_list(self) -> list[int]:
+        return [int(x.strip()) for x in self.speaking_recent_book_message_ids.split(",") if x.strip()]
+
     # --- Required subscription-gate channels (public, 4 of them) ---
     # These are public channels with usernames, so getChatMember is called with
     # "@username" directly -- no numeric chat_id needed/collected for these.

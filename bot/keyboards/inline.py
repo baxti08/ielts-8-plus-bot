@@ -66,6 +66,30 @@ def section_choice_keyboard(available_sections: list[Section]) -> InlineKeyboard
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+def more_features_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=Section.speaking_recent.display_name, callback_data="more:speaking_recent")],
+            [InlineKeyboardButton(text=Section.writing_ai_check.display_name, callback_data="more:writing_ai_check")],
+            [InlineKeyboardButton(text="◀️ Menyu", callback_data="menu")],
+        ]
+    )
+
+
+def speaking_recent_submenu_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="IELTS Recent Speaking Questions", callback_data="speaking_recent:ielts")],
+            [
+                InlineKeyboardButton(
+                    text="Multi Level Recent Speaking Questions", callback_data="speaking_recent:multilevel"
+                )
+            ],
+            [InlineKeyboardButton(text="◀️ Menyu", callback_data="menu")],
+        ]
+    )
+
+
 def content_day_grid(section: Section, page: int) -> InlineKeyboardMarkup:
     """
     page is 0-indexed. Each page shows up to DAYS_PER_PAGE day buttons (5 per row),
