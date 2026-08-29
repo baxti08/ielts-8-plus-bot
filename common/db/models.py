@@ -84,6 +84,13 @@ class User(Base):
     )
 
     is_verified_member: Mapped[bool] = mapped_column(Boolean, default=False)
+    # One-way flag: True the first time this user ever passes full channel
+    # verification, and NEVER reset back to False afterward (unlike
+    # is_verified_member, which flips both ways as they join/leave). Used to
+    # decide was_fresh_at_landing on a NEW referral link click -- prevents
+    # someone who's already been a real member from leaving, clicking a
+    # friend's link, and rejoining just to hand that friend undeserved credit.
+    ever_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     last_membership_check: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Referral link click bookkeeping: the payload (referrer id) a user landed with,

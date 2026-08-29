@@ -43,6 +43,7 @@ async def manual_add_points(
             username=MANUAL_USERNAME,
             full_name="Manual admin grant",
             is_verified_member=True,
+            ever_verified=True,
         )
         session.add(placeholder)
         await session.flush()

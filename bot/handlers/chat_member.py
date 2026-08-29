@@ -73,6 +73,7 @@ async def on_chat_member_update(event: ChatMemberUpdated, session: AsyncSession,
         fully_verified = await is_fully_verified(bot, target_user_id)
         if fully_verified and not user.is_verified_member:
             user.is_verified_member = True
+            user.ever_verified = True
             user.last_membership_check = datetime.now(timezone.utc)
             await session.flush()
             referral = await get_referral_for_referred(session, target_user_id)

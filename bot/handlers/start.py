@@ -51,7 +51,11 @@ async def cmd_start(message: Message, command: CommandObject, session: AsyncSess
             # Capture membership state RIGHT NOW, before this user has a chance
             # to join anything -- this is what decides was_fresh_at_landing.
             results = await check_all_required(bot, user_id)
-            was_fresh = not any(results.values())
+            # Fresh only if they're not currently a member of any required
+            # channel AND have never been verified before, ever -- otherwise
+            # a real existing member could leave, click a friend's link, and
+            # rejoin just to hand that friend undeserved credit.
+            was_fresh = not any(results.values()) and not user.ever_verified
             user.landed_via_referrer_id = referrer_id
             await record_referral_landing(session, referred_id=user_id, referrer_id=referrer_id, was_fresh=was_fresh)
             await session.flush()
@@ -78,6 +82,8 @@ async def cb_gate_check(callback: CallbackQuery, session: AsyncSession, bot: Bot
     was_verified_before = user.is_verified_member
     user.is_verified_member = now_verified
     user.last_membership_check = datetime.now(timezone.utc)
+    if now_verified:
+        user.ever_verified = True
 
     if now_verified and not was_verified_before:
         # If this user landed via a referral link, this is the moment the
