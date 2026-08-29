@@ -88,19 +88,22 @@ async def on_chat_member_update(event: ChatMemberUpdated, session: AsyncSession,
                 await session.flush()
                 referrer_id = referral.referrer_id
 
-                progress = await referral_progress(session, referrer_id)
-                try:
-                    await bot.send_message(
-                        referrer_id,
-                        texts.friend_joined_notice(
-                            event.new_chat_member.user.full_name,
-                            progress["in_progress"],
-                            progress["target"],
-                            texts.squares(progress["in_progress"], progress["target"]),
-                        ),
-                    )
-                except Exception:
-                    pass
+                # Only notify if this referral actually counted -- see the
+                # matching comment in bot/handlers/start.py.
+                if referral.is_valid:
+                    progress = await referral_progress(session, referrer_id)
+                    try:
+                        await bot.send_message(
+                            referrer_id,
+                            texts.friend_joined_notice(
+                                event.new_chat_member.user.full_name,
+                                progress["in_progress"],
+                                progress["target"],
+                                texts.squares(progress["in_progress"], progress["target"]),
+                            ),
+                        )
+                    except Exception:
+                        pass
 
                 available = await should_prompt_section_choice(session, referrer_id)
                 if available:

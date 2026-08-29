@@ -86,21 +86,24 @@ async def cb_gate_check(callback: CallbackQuery, session: AsyncSession, bot: Bot
             await session.flush()
             referrer_id = referral.referrer_id
 
-            # Notify the referrer immediately that a friend joined, with live
-            # progress -- independent of whether this completes a batch of 3.
-            progress = await referral_progress(session, referrer_id)
-            try:
-                await bot.send_message(
-                    referrer_id,
-                    texts.friend_joined_notice(
-                        callback.from_user.full_name,
-                        progress["in_progress"],
-                        progress["target"],
-                        texts.squares(progress["in_progress"], progress["target"]),
-                    ),
-                )
-            except Exception:
-                pass  # referrer may have blocked the bot -- don't let this break verification
+            # Only notify if this referral actually counted. activate_referral()
+            # silently no-ops when was_fresh_at_landing is False (the person was
+            # already a member of a gate channel before clicking the link) --
+            # referral.is_valid only flips True in the genuine, credited case.
+            if referral.is_valid:
+                progress = await referral_progress(session, referrer_id)
+                try:
+                    await bot.send_message(
+                        referrer_id,
+                        texts.friend_joined_notice(
+                            callback.from_user.full_name,
+                            progress["in_progress"],
+                            progress["target"],
+                            texts.squares(progress["in_progress"], progress["target"]),
+                        ),
+                    )
+                except Exception:
+                    pass  # referrer may have blocked the bot -- don't let this break verification
 
             available = await should_prompt_section_choice(session, referrer_id)
             if available:
