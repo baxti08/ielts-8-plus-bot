@@ -53,9 +53,23 @@ async def get_or_create_user(
             user.full_name = full_name
             changed = True
         return user, False
-    user = User(telegram_id=telegram_id, username=username, full_name=full_name or "")
-    session.add(user)
+
+    # Use INSERT ... ON CONFLICT DO NOTHING instead of a plain insert. Two
+    # /start requests for the same brand-new user can race here (double-tap,
+    # a redelivered Telegram update, etc.) -- both see no existing row above
+    # and both attempt to insert. A plain insert would let the loser crash
+    # with a duplicate-key IntegrityError; this makes the loser a no-op
+    # instead, and the re-fetch below picks up whichever insert won.
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    stmt = (
+        pg_insert(User)
+        .values(telegram_id=telegram_id, username=username, full_name=full_name or "")
+        .on_conflict_do_nothing(index_elements=["telegram_id"])
+    )
+    await session.execute(stmt)
     await session.flush()
+    user = await session.get(User, telegram_id)
     return user, True
 
 
