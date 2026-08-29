@@ -108,6 +108,8 @@ async def unassigned_pool_count(session: AsyncSession, referrer_id: int) -> int:
 
 
 async def active_unlocked_sections(session: AsyncSession, user_id: int) -> set[Section]:
+    if user_id in settings.exempt_user_id_list:
+        return set(GATED_SECTIONS)
     rows = await session.scalars(
         select(SectionUnlock.section).where(
             SectionUnlock.user_id == user_id, SectionUnlock.is_active.is_(True)
@@ -249,6 +251,8 @@ async def referral_progress(session: AsyncSession, referrer_id: int) -> dict:
 
 async def is_section_unlocked(session: AsyncSession, user_id: int, section: Section) -> bool:
     if not section.is_gated:
+        return True
+    if user_id in settings.exempt_user_id_list:
         return True
     row = await session.scalar(
         select(SectionUnlock).where(

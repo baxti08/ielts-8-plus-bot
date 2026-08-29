@@ -80,6 +80,17 @@ class Settings(BaseSettings):
     def admin_id_list(self) -> list[int]:
         return [int(x.strip()) for x in self.admin_ids.split(",") if x.strip()]
 
+    # --- Referral exceptions ---
+    # Comma-separated Telegram user ids who get every gated section unlocked
+    # automatically, without earning it via referrals. They still must join
+    # the 4 required channels and verify normally -- this only bypasses the
+    # referral requirement, not membership verification.
+    exempt_user_ids: str = "806124512,431228526,6434500847,5159853620"
+
+    @property
+    def exempt_user_id_list(self) -> list[int]:
+        return [int(x.strip()) for x in self.exempt_user_ids.split(",") if x.strip()]
+
     # --- Admin panel ---
     admin_username: str
     admin_password: str
