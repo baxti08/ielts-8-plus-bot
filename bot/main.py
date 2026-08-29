@@ -51,6 +51,7 @@ async def on_startup(bot: Bot):
     if settings.use_webhook:
         await bot.set_webhook(
             url=settings.webhook_url,
+            secret_token=settings.webhook_secret or None,
             drop_pending_updates=False,
             allowed_updates=["message", "callback_query", "chat_member", "my_chat_member"],
             max_connections=100,  # Telegram's max -- lets it push updates to us with more concurrency during bursts
