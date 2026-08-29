@@ -94,9 +94,9 @@ async def on_chat_member_update(event: ChatMemberUpdated, session: AsyncSession,
                             referrer_id,
                             texts.friend_joined_notice(
                                 event.new_chat_member.user.full_name,
-                                progress["in_progress"],
+                                progress["total_valid"],
                                 progress["target"],
-                                texts.squares(progress["in_progress"], progress["target"]),
+                                texts.squares(progress["total_valid"], progress["target"]),
                             ),
                         )
                     except Exception:

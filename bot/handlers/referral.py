@@ -32,7 +32,7 @@ async def send_section_choice_prompt(bot: Bot, referrer_id: int, available_secti
 async def _pitch_text(session: AsyncSession, user_id: int) -> str:
     progress = await referral_progress(session, user_id)
     return texts.referral_pitch_block(
-        progress["in_progress"], progress["target"], texts.squares(progress["in_progress"], progress["target"])
+        progress["total_valid"], progress["target"], texts.squares(progress["total_valid"], progress["target"])
     )
 
 
@@ -92,7 +92,7 @@ async def cb_open_lessons(callback: CallbackQuery, session: AsyncSession):
 async def show_my_result(message: Message, session: AsyncSession):
     user_id = message.from_user.id
     progress = await referral_progress(session, user_id)
-    n = progress["in_progress"]
+    n = progress["total_valid"]
     target = progress["target"]
     sq = texts.squares(n, target)
 
@@ -101,12 +101,6 @@ async def show_my_result(message: Message, session: AsyncSession):
             f"📊 Mening natijam\n\n🎉 Barcha bo'limlar ochilgan! Rahmat, {len(GATED_SECTIONS)} ta bo'limni "
             f"do'stlaringiz yordamida ochdingiz."
         )
-        return
-
-    if n >= target:
-        # A batch is complete but somehow not yet assigned (edge case, e.g. all
-        # remaining sections already unlocked elsewhere) -- treat as in-progress text.
-        await message.answer(texts.my_result_in_progress(n, target, sq))
         return
 
     await message.answer(texts.my_result_in_progress(n, target, sq), reply_markup=locked_section_keyboard())

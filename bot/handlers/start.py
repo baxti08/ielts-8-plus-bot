@@ -102,9 +102,9 @@ async def cb_gate_check(callback: CallbackQuery, session: AsyncSession, bot: Bot
                         referrer_id,
                         texts.friend_joined_notice(
                             callback.from_user.full_name,
-                            progress["in_progress"],
+                            progress["total_valid"],
                             progress["target"],
-                            texts.squares(progress["in_progress"], progress["target"]),
+                            texts.squares(progress["total_valid"], progress["target"]),
                         ),
                     )
                 except Exception:
