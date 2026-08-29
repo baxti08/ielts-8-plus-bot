@@ -45,8 +45,10 @@
             <span class="badge green">Valid</span>
           {% elif not referral.was_fresh_at_landing %}
             <span class="badge red">Eski a'zo edi</span>
+          {% elif referral.revoked_at %}
+            <span class="badge red">Bekor qilingan</span>
           {% else %}
-            <span class="badge">Bekor qilingan</span>
+            <span class="badge">Kutilmoqda</span>
           {% endif %}
         </td>
         <td>{{ referral.section_assigned.display_name if referral.section_assigned else "-" }}</td>
