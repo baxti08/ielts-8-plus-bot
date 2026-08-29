@@ -19,7 +19,6 @@ from common.referral_logic import (
     activate_referral,
     get_referral_for_referred,
     referral_progress,
-    revoke_referral,
     should_prompt_section_choice,
 )
 
@@ -47,6 +46,11 @@ async def on_chat_member_update(event: ChatMemberUpdated, session: AsyncSession,
 
     if was_member and not is_member_now:
         # Left this required channel -> re-check ALL 4 to update the overall flag.
+        # Note: this only affects THIS user's own access to gated content --
+        # it deliberately does NOT touch any Referral row. Once a referral is
+        # credited to the referrer, it's permanent (product decision: the
+        # referrer has no control over what their friend does afterward, so
+        # they shouldn't lose progress or an unlocked section because of it).
         fully_verified = await is_fully_verified(bot, target_user_id)
         if user.is_verified_member and not fully_verified:
             user.is_verified_member = False
@@ -62,19 +66,6 @@ async def on_chat_member_update(event: ChatMemberUpdated, session: AsyncSession,
             except Exception:
                 pass
 
-            referral = await get_referral_for_referred(session, target_user_id)
-            if referral is not None and referral.is_valid:
-                relocked_section = await revoke_referral(session, referral)
-                await session.flush()
-                if relocked_section is not None:
-                    referrer_id = referral.referrer_id
-                    try:
-                        await bot.send_message(
-                            referrer_id, texts.section_relocked_notice(relocked_section.display_name)
-                        )
-                    except Exception:
-                        pass
-
     elif not was_member and is_member_now:
         # Rejoined this channel -> re-check all 4; if now fully verified, restore.
         fully_verified = await is_fully_verified(bot, target_user_id)
@@ -84,13 +75,16 @@ async def on_chat_member_update(event: ChatMemberUpdated, session: AsyncSession,
             await session.flush()
             referral = await get_referral_for_referred(session, target_user_id)
             if referral is not None:
+                was_valid_before = referral.is_valid
                 await activate_referral(session, referral)
                 await session.flush()
                 referrer_id = referral.referrer_id
 
-                # Only notify if this referral actually counted -- see the
-                # matching comment in bot/handlers/start.py.
-                if referral.is_valid:
+                # Only notify on a genuine first-time validation. Referrals
+                # are now permanent once earned (see comment above), so a
+                # rejoin after an already-valid referral shouldn't re-fire
+                # the notification.
+                if referral.is_valid and not was_valid_before:
                     progress = await referral_progress(session, referrer_id)
                     try:
                         await bot.send_message(

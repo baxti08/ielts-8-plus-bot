@@ -82,15 +82,17 @@ async def cb_gate_check(callback: CallbackQuery, session: AsyncSession, bot: Bot
         # referral becomes (or re-becomes) valid.
         referral = await get_referral_for_referred(session, user_id)
         if referral is not None:
+            was_valid_before = referral.is_valid
             await activate_referral(session, referral)
             await session.flush()
             referrer_id = referral.referrer_id
 
-            # Only notify if this referral actually counted. activate_referral()
-            # silently no-ops when was_fresh_at_landing is False (the person was
-            # already a member of a gate channel before clicking the link) --
-            # referral.is_valid only flips True in the genuine, credited case.
-            if referral.is_valid:
+            # Only notify on a genuine first-time validation. Referrals are
+            # permanent once earned (the referrer keeps credit even if this
+            # friend later leaves a channel -- that's outside the referrer's
+            # control), so re-verifying an already-valid referral shouldn't
+            # re-fire the notification.
+            if referral.is_valid and not was_valid_before:
                 progress = await referral_progress(session, referrer_id)
                 try:
                     await bot.send_message(
