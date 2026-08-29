@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard{% endblock %}
+{% block content %}
+<h1>Reyting <span style="color:#9aa2ad;font-weight:400;font-size:14px;">(eng ko'p taklif qilganlar, top {{ limit }})</span></h1>
+
+{% if rows %}
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Foydalanuvchi</th>
+        <th>Telegram ID</th>
+        <th>Taklif qilingan (valid)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user, valid_count in rows %}
+      <tr>
+        <td>
+          {% if loop.index == 1 %}🥇
+          {% elif loop.index == 2 %}🥈
+          {% elif loop.index == 3 %}🥉
+          {% else %}{{ loop.index }}
+          {% endif %}
+        </td>
+        <td><a href="/users/{{ user.telegram_id }}">{{ user.full_name or user.telegram_id }}</a></td>
+        <td>{{ user.username and "@" + user.username or "-" }} <span style="color:#9aa2ad;">{{ user.telegram_id }}</span></td>
+        <td><b>{{ valid_count }}</b></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p style="color:#9aa2ad;">Hali hech kim do'stlarini taklif qilmagan.</p>
+{% endif %}
+{% endblock %}

@@ -7,7 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from admin.auth import RedirectToLogin, login_session, logout_session, verify_credentials
 from admin.deps import templates
-from admin.routers import broadcast, content, referrals, stats, users
+from admin.routers import broadcast, content, leaderboard, referrals, stats, users
 from common.config import get_settings
 
 settings = get_settings()
@@ -52,4 +52,5 @@ app.include_router(stats.router)
 app.include_router(content.router)
 app.include_router(users.router)
 app.include_router(referrals.router)
+app.include_router(leaderboard.router)
 app.include_router(broadcast.router)
