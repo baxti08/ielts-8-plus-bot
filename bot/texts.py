@@ -95,7 +95,8 @@ def my_result_in_progress(n: int, target: int, squares: str) -> str:
         "📊 <b>Mening natijam</b>\n\n"
         f"👥 Taklif qilingan do'stlar: <b>{n}/{target}</b>\n"
         f"{squares}\n\n"
-        "🔒 Dars va materiallar hali yopiq. Do'stlaringizni taklif qilishda davom eting!"
+        "🔒 Siz hali barcha dars va materiallarga ega chiqmadingiz. Do'stlaringizni taklif qilishda davom eting.\n\n"
+        "Har <b>3 ta</b> do'stingiz uchun bir section funksiya ochiladi!"
     )
 
 
