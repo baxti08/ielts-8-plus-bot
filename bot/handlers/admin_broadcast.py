@@ -140,19 +140,47 @@ async def cb_choose_segment(callback: CallbackQuery, state: FSMContext, session:
     await callback.answer()
     await callback.message.edit_text(
         f"👥 Tanlandi: <b>{SEGMENTS[segment]}</b> ({len(target_ids)} ta foydalanuvchi)\n\n"
-        "Endi xabar matnini yuboring (HTML formatlash qo'llab-quvvatlanadi):"
+        "Endi xabar yuboring — matn, rasm, video yoki ovozli xabar bo'lishi mumkin "
+        "(HTML formatlash qo'llab-quvvatlanadi):"
     )
 
 
+def _label_for_message(message: Message) -> str:
+    """Short human-readable summary for the confirm screen and history table.
+    The actual broadcast never re-reads this -- it copies the real message
+    via bot.copy_message using source_chat_id/source_message_id, so this
+    works the same whether the admin sent text, a photo, a video, a voice
+    note, or a document."""
+    if message.text:
+        return message.html_text
+    caption = message.caption or ""
+    if message.photo:
+        return caption or "[rasm]"
+    if message.video:
+        return caption or "[video]"
+    if message.voice:
+        return caption or "[ovozli xabar]"
+    if message.document:
+        return caption or "[fayl]"
+    if message.audio:
+        return caption or "[audio]"
+    return caption or "[media]"
+
+
 @router.message(StateFilter(BroadcastStates.typing_message), F.from_user.id.in_(settings.admin_id_list))
-async def receive_message_text(message: Message, state: FSMContext):
+async def receive_broadcast_content(message: Message, state: FSMContext):
     data = await state.get_data()
-    await state.update_data(message_text=message.html_text)
+    label = _label_for_message(message)
+    await state.update_data(
+        source_chat_id=message.chat.id,
+        source_message_id=message.message_id,
+        message_text=label,
+    )
     await state.set_state(BroadcastStates.confirming)
     await message.answer(
         f"📋 Tayyor:\n\n"
         f"Kimlarga: <b>{SEGMENTS[data['segment']]}</b> ({data['target_count']} ta)\n\n"
-        f"Xabar matni:\n{message.html_text}\n\n"
+        f"Xabar (yuqorida ko'rsatildi): {label}\n\n"
         "Yuborishni tasdiqlaysizmi?",
         reply_markup=_confirm_keyboard(),
     )
@@ -163,6 +191,8 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncS
     data = await state.get_data()
     segment = data["segment"]
     message_text = data["message_text"]
+    source_chat_id = data["source_chat_id"]
+    source_message_id = data["source_message_id"]
 
     already_running = await session.scalar(
         select(BroadcastLog).where(BroadcastLog.status.in_(["pending", "running"])).limit(1)
@@ -177,6 +207,8 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncS
     log = BroadcastLog(
         segment=segment,
         message_text=message_text,
+        source_chat_id=source_chat_id,
+        source_message_id=source_message_id,
         total_targets=len(target_ids),
         created_by=f"bot_admin:{callback.from_user.id}",
         status="pending",
@@ -186,7 +218,7 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncS
     log_id = log.id
     await session.commit()
 
-    asyncio.create_task(run_broadcast(log_id, target_ids, message_text))
+    asyncio.create_task(run_broadcast(log_id, target_ids, source_chat_id, source_message_id))
 
     await callback.answer("Boshlandi!")
     placeholder = BroadcastLog(

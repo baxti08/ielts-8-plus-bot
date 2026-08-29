@@ -183,7 +183,14 @@ class BroadcastLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     segment: Mapped[str] = mapped_column(String(64))
-    message_text: Mapped[str] = mapped_column(Text)
+    # message_text is now only a human-readable label for the history table
+    # (e.g. the typed text, or a caption, or "[media]") -- it is NOT what
+    # gets sent anymore. Actual sending copies source_chat_id/source_message_id
+    # via bot.copy_message, which works for text, photo, video, voice, or any
+    # other message type without type-specific handling.
+    message_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_chat_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    source_message_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     total_targets: Mapped[int] = mapped_column(Integer, default=0)
     sent_count: Mapped[int] = mapped_column(Integer, default=0)
     failed_count: Mapped[int] = mapped_column(Integer, default=0)

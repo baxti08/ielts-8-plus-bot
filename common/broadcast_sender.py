@@ -40,7 +40,16 @@ RATE_PER_SEC = settings.broadcast_rate_per_sec  # messages/sec, just under Teleg
 PROGRESS_WRITE_EVERY = 10  # persist progress every N batches (~10s), not every batch -- lighter on the DB at 50k scale
 
 
-async def run_broadcast(broadcast_id: int, user_ids: list[int], message_text: str):
+async def run_broadcast(broadcast_id: int, user_ids: list[int], source_chat_id: int, source_message_id: int):
+    """
+    source_chat_id/source_message_id point at a single already-sent Telegram
+    message (text, photo, video, voice, document -- anything) that every
+    target user receives a copy of via bot.copy_message. Both the web panel
+    and the bot's /broadcast command relay whatever the admin composed to
+    BACKUP_ADMIN_CHAT_ID first (see admin/routers/broadcast.py and
+    bot/handlers/admin_broadcast.py) to get this source message, so this
+    function itself never needs to know or care what type of content it is.
+    """
     bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     try:
         async with SessionLocal() as session:
@@ -54,7 +63,9 @@ async def run_broadcast(broadcast_id: int, user_ids: list[int], message_text: st
             batch = user_ids[i : i + RATE_PER_SEC]
             batch_start = time.monotonic()
 
-            results = await asyncio.gather(*(_send_one(bot, uid, message_text) for uid in batch))
+            results = await asyncio.gather(
+                *(_send_one(bot, uid, source_chat_id, source_message_id) for uid in batch)
+            )
             sent += sum(1 for r in results if r)
             failed += sum(1 for r in results if not r)
 
@@ -90,10 +101,10 @@ async def run_broadcast(broadcast_id: int, user_ids: list[int], message_text: st
         await bot.session.close()
 
 
-async def _send_one(bot: Bot, user_id: int, message_text: str) -> bool:
+async def _send_one(bot: Bot, user_id: int, source_chat_id: int, source_message_id: int) -> bool:
     for attempt in range(2):
         try:
-            await bot.send_message(user_id, message_text)
+            await bot.copy_message(chat_id=user_id, from_chat_id=source_chat_id, message_id=source_message_id)
             return True
         except TelegramRetryAfter as e:
             await asyncio.sleep(e.retry_after)

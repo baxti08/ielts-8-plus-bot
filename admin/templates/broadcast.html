@@ -14,7 +14,7 @@
     Yangi broadcast shu tugagach boshlanadi.
   </p>
   {% else %}
-  <form method="post" action="/broadcast/send">
+  <form method="post" action="/broadcast/send" enctype="multipart/form-data">
     <div class="row">
       <select name="segment">
         {% for key, label in segments.items() %}
@@ -23,7 +23,13 @@
       </select>
     </div>
     <div class="row">
-      <textarea name="message_text" placeholder="Xabar matni (HTML formatlash qo'llab-quvvatlanadi)" required></textarea>
+      <textarea name="message_text" placeholder="Xabar matni yoki media uchun izoh (HTML formatlash qo'llab-quvvatlanadi)"></textarea>
+    </div>
+    <div class="row">
+      <label style="display:block;color:#9aa2ad;font-size:13px;margin-bottom:4px;">
+        Media (ixtiyoriy) — rasm, video, ovozli xabar yoki fayl:
+      </label>
+      <input type="file" name="media" accept="image/*,video/*,audio/*,.pdf,.doc,.docx">
     </div>
     <button type="submit" onclick="return confirm('Xabar yuborishni boshlaysizmi?')">Yuborishni boshlash</button>
   </form>
