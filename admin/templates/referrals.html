@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Referrals{% endblock %}
+{% block content %}
+<h1>Referallar <span style="color:#9aa2ad;font-weight:400;font-size:14px;">(jami: {{ total_referrals }}, valid: {{ total_valid }})</span></h1>
+
+<div class="card">
+  <form method="get" action="/referrals">
+    <div class="row">
+      <input type="text" name="q" value="{{ q }}" placeholder="Telegram ID, username yoki ism (ikkala tarafda ham qidiradi)" style="width:380px">
+      <button type="submit">Qidirish</button>
+      {% if q %}<a href="/referrals" class="secondary" style="align-self:center;">Tozalash</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+{% if showing_capped %}
+<p style="color:#9aa2ad;font-size:13px;">Eng so'nggi {{ limit }} ta referral ko'rsatilmoqda. Kerakli foydalanuvchini topish uchun qidiruvdan foydalaning.</p>
+{% endif %}
+
+{% if rows %}
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Kim taklif qildi</th>
+        <th>Kimni taklif qildi</th>
+        <th>Holat</th>
+        <th>Bo'lim</th>
+        <th>Sana</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for referral, referrer, referred in rows %}
+      <tr>
+        <td>
+          <a href="/users/{{ referrer.telegram_id }}">{{ referrer.full_name or referrer.telegram_id }}</a>
+          <div style="color:#9aa2ad;font-size:12px;">{{ referrer.username and "@" + referrer.username or referrer.telegram_id }}</div>
+        </td>
+        <td>
+          <a href="/users/{{ referred.telegram_id }}">{{ referred.full_name or referred.telegram_id }}</a>
+          <div style="color:#9aa2ad;font-size:12px;">{{ referred.username and "@" + referred.username or referred.telegram_id }}</div>
+        </td>
+        <td>
+          {% if referral.is_valid %}
+            <span class="badge green">Valid</span>
+          {% elif not referral.was_fresh_at_landing %}
+            <span class="badge red">Eski a'zo edi</span>
+          {% else %}
+            <span class="badge">Bekor qilingan</span>
+          {% endif %}
+        </td>
+        <td>{{ referral.section_assigned.display_name if referral.section_assigned else "-" }}</td>
+        <td>{{ referral.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% elif q %}
+<p style="color:#9aa2ad;">Hech narsa topilmadi.</p>
+{% else %}
+<p style="color:#9aa2ad;">Hali referral yo'q.</p>
+{% endif %}
+{% endblock %}
