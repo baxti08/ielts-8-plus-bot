@@ -10,6 +10,7 @@ from bot.keyboards.inline import (
     section_choice_keyboard,
 )
 from bot.keyboards.reply import BTN_MY_RESULT, BTN_REFERRAL_LINK
+from bot.services.menu_render import send_main_menu
 from common.db.models import GATED_SECTIONS, Section
 from common.referral_logic import (
     REFERRALS_PER_SLOT,
@@ -129,3 +130,9 @@ async def cb_choose_section(callback: CallbackQuery, session: AsyncSession, bot:
     available = await should_prompt_section_choice(session, user_id)
     if available:
         await send_section_choice_prompt(bot, user_id, available)
+
+    # Refresh the persistent reply keyboard so the 🔒 icon on this section
+    # disappears right away -- it doesn't auto-update on its own, so without
+    # this the button would keep showing locked (even though tapping it
+    # would actually work) until the next /start or "Menyu" press.
+    await send_main_menu(callback.message, session, user_id, callback.from_user.full_name or "do'stim")
