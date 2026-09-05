@@ -31,6 +31,12 @@
       </label>
       <input type="file" name="media" accept="image/*,video/*,audio/*,.pdf,.doc,.docx">
     </div>
+    <div class="row">
+      <label style="display:block;color:#9aa2ad;font-size:13px;margin-bottom:4px;">
+        Istisno qilish (ixtiyoriy) — Telegram ID'lar, vergul bilan ajrating:
+      </label>
+      <input type="text" name="exclude_ids" placeholder="masalan: 806124512, 431228526">
+    </div>
     <button type="submit" onclick="return confirm('Xabar yuborishni boshlaysizmi?')">Yuborishni boshlash</button>
   </form>
   {% endif %}

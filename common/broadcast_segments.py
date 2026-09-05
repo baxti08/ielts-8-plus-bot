@@ -26,7 +26,19 @@ _NO_CONTENT_SECTION = {
 }
 
 
-async def get_target_user_ids(session: AsyncSession, segment: str) -> list[int]:
+def parse_exclude_ids(raw: str) -> list[int]:
+    """Parses free-text admin input (comma or newline separated Telegram
+    IDs) into a clean list of ints, silently skipping anything that isn't a
+    valid integer rather than crashing on a typo or stray character."""
+    if not raw:
+        return []
+    tokens = raw.replace("\n", ",").split(",")
+    return [int(t.strip()) for t in tokens if t.strip().lstrip("-").isdigit()]
+
+
+async def get_target_user_ids(
+    session: AsyncSession, segment: str, exclude_ids: list[int] | None = None
+) -> list[int]:
     if segment == "all":
         stmt = select(User.telegram_id).where(User.telegram_id > 0)
     elif segment == "unsubscribed":
@@ -49,6 +61,9 @@ async def get_target_user_ids(session: AsyncSession, segment: str) -> list[int]:
         stmt = select(User.telegram_id).where(User.telegram_id > 0, User.telegram_id.not_in(delivered_ids))
     else:
         raise ValueError(f"Unknown segment: {segment}")
+
+    if exclude_ids:
+        stmt = stmt.where(User.telegram_id.not_in(exclude_ids))
 
     result = await session.scalars(stmt)
     return list(result.all())

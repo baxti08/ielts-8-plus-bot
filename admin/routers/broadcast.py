@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from admin.auth import require_admin
 from common.broadcast_sender import run_broadcast
 from admin.deps import get_session, templates
-from common.broadcast_segments import SEGMENTS, get_target_user_ids
+from common.broadcast_segments import SEGMENTS, get_target_user_ids, parse_exclude_ids
 from common.config import get_settings
 from common.db.models import BroadcastLog
 
@@ -81,6 +81,7 @@ async def send_broadcast(
     background_tasks: BackgroundTasks,
     segment: str = Form(...),
     message_text: str = Form(""),
+    exclude_ids: str = Form(""),
     media: UploadFile | None = None,
     session: AsyncSession = Depends(get_session),
     admin: str = Depends(require_admin),
@@ -97,7 +98,8 @@ async def send_broadcast(
     if not message_text and (media is None or not media.filename):
         return RedirectResponse(url="/broadcast?error=empty", status_code=303)
 
-    target_ids = await get_target_user_ids(session, segment)
+    excluded = parse_exclude_ids(exclude_ids)
+    target_ids = await get_target_user_ids(session, segment, exclude_ids=excluded)
 
     bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     try:

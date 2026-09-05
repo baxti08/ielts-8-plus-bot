@@ -26,7 +26,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.broadcast_segments import SEGMENTS, get_target_user_ids
+from common.broadcast_segments import SEGMENTS, get_target_user_ids, parse_exclude_ids
 from common.broadcast_sender import run_broadcast
 from common.config import get_settings
 from common.db.models import BroadcastLog
@@ -42,6 +42,7 @@ def _is_admin(user_id: int) -> bool:
 
 class BroadcastStates(StatesGroup):
     choosing_segment = State()
+    typing_excludes = State()
     typing_message = State()
     confirming = State()
 
@@ -134,12 +135,27 @@ async def _get_running_broadcast(message: Message) -> BroadcastLog | None:
 @router.callback_query(StateFilter(BroadcastStates.choosing_segment), F.data.startswith("admbc_seg:"))
 async def cb_choose_segment(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     segment = callback.data.split(":", 1)[1]
-    target_ids = await get_target_user_ids(session, segment)
-    await state.update_data(segment=segment, target_count=len(target_ids))
-    await state.set_state(BroadcastStates.typing_message)
+    await state.update_data(segment=segment)
+    await state.set_state(BroadcastStates.typing_excludes)
     await callback.answer()
     await callback.message.edit_text(
-        f"👥 Tanlandi: <b>{SEGMENTS[segment]}</b> ({len(target_ids)} ta foydalanuvchi)\n\n"
+        f"👥 Tanlandi: <b>{SEGMENTS[segment]}</b>\n\n"
+        "Istisno qilinadigan foydalanuvchilar bormi? Telegram ID'larini vergul bilan kiriting "
+        "(masalan: 806124512, 431228526), yoki hech kimni istisno qilmaslik uchun \"yo'q\" deb yozing:"
+    )
+
+
+@router.message(StateFilter(BroadcastStates.typing_excludes), F.from_user.id.in_(settings.admin_id_list))
+async def receive_excludes(message: Message, state: FSMContext, session: AsyncSession):
+    exclude_ids = parse_exclude_ids(message.text or "")
+    data = await state.get_data()
+    target_ids = await get_target_user_ids(session, data["segment"], exclude_ids=exclude_ids)
+    await state.update_data(exclude_ids=exclude_ids, target_count=len(target_ids))
+    await state.set_state(BroadcastStates.typing_message)
+
+    excluded_note = f"\n🚫 Istisno qilindi: {len(exclude_ids)} ta foydalanuvchi" if exclude_ids else ""
+    await message.answer(
+        f"👥 Tanlandi: <b>{SEGMENTS[data['segment']]}</b> ({len(target_ids)} ta foydalanuvchi){excluded_note}\n\n"
         "Endi xabar yuboring — matn, rasm, video yoki ovozli xabar bo'lishi mumkin "
         "(HTML formatlash qo'llab-quvvatlanadi):"
     )
@@ -203,7 +219,7 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncS
         await state.clear()
         return
 
-    target_ids = await get_target_user_ids(session, segment)
+    target_ids = await get_target_user_ids(session, segment, exclude_ids=data.get("exclude_ids"))
     log = BroadcastLog(
         segment=segment,
         message_text=message_text,
