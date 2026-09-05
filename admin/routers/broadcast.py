@@ -120,6 +120,13 @@ async def send_broadcast(
     await session.commit()
     await session.refresh(log)
 
-    background_tasks.add_task(run_broadcast, log.id, target_ids, source_chat_id, source_message_id)
+    background_tasks.add_task(
+        run_broadcast,
+        log.id,
+        target_ids,
+        source_chat_id,
+        source_message_id,
+        text_only_content=message_text if (media is None or not media.filename) else None,
+    )
 
     return RedirectResponse(url="/broadcast", status_code=303)

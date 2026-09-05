@@ -187,10 +187,12 @@ def _label_for_message(message: Message) -> str:
 async def receive_broadcast_content(message: Message, state: FSMContext):
     data = await state.get_data()
     label = _label_for_message(message)
+    is_text_only = message.content_type == "text"
     await state.update_data(
         source_chat_id=message.chat.id,
         source_message_id=message.message_id,
         message_text=label,
+        text_only_content=label if is_text_only else None,
     )
     await state.set_state(BroadcastStates.confirming)
     await message.answer(
@@ -234,7 +236,9 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncS
     log_id = log.id
     await session.commit()
 
-    asyncio.create_task(run_broadcast(log_id, target_ids, source_chat_id, source_message_id))
+    asyncio.create_task(
+        run_broadcast(log_id, target_ids, source_chat_id, source_message_id, data.get("text_only_content"))
+    )
 
     await callback.answer("Boshlandi!")
     placeholder = BroadcastLog(

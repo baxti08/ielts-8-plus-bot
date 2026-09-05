@@ -28,6 +28,7 @@ from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter, TelegramBadRequest
+from aiogram.types import LinkPreviewOptions
 
 from common.config import get_settings
 from common.db.engine import SessionLocal
@@ -40,7 +41,13 @@ RATE_PER_SEC = settings.broadcast_rate_per_sec  # messages/sec, just under Teleg
 PROGRESS_WRITE_EVERY = 10  # persist progress every N batches (~10s), not every batch -- lighter on the DB at 50k scale
 
 
-async def run_broadcast(broadcast_id: int, user_ids: list[int], source_chat_id: int, source_message_id: int):
+async def run_broadcast(
+    broadcast_id: int,
+    user_ids: list[int],
+    source_chat_id: int,
+    source_message_id: int,
+    text_only_content: str | None = None,
+):
     """
     source_chat_id/source_message_id point at a single already-sent Telegram
     message (text, photo, video, voice, document -- anything) that every
@@ -49,6 +56,15 @@ async def run_broadcast(broadcast_id: int, user_ids: list[int], source_chat_id: 
     BACKUP_ADMIN_CHAT_ID first (see admin/routers/broadcast.py and
     bot/handlers/admin_broadcast.py) to get this source message, so this
     function itself never needs to know or care what type of content it is.
+
+    text_only_content: if the composed message was pure text (no media),
+    this holds that exact HTML text, captured at compose time -- the Bot API
+    has no way to read an arbitrary message's content back later, so this
+    must be passed in rather than looked up. When present, every send uses
+    send_message with link previews forced off instead of copy_message,
+    since a preview attached to the ORIGINAL message can't be stripped via
+    copy_message after the fact (link_preview_options is a property that
+    only exists on the send itself, not the resulting message you'd copy).
     """
     bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     try:
@@ -64,7 +80,7 @@ async def run_broadcast(broadcast_id: int, user_ids: list[int], source_chat_id: 
             batch_start = time.monotonic()
 
             results = await asyncio.gather(
-                *(_send_one(bot, uid, source_chat_id, source_message_id) for uid in batch)
+                *(_send_one(bot, uid, source_chat_id, source_message_id, text_only_content) for uid in batch)
             )
             sent += sum(1 for r in results if r)
             failed += sum(1 for r in results if not r)
@@ -101,10 +117,17 @@ async def run_broadcast(broadcast_id: int, user_ids: list[int], source_chat_id: 
         await bot.session.close()
 
 
-async def _send_one(bot: Bot, user_id: int, source_chat_id: int, source_message_id: int) -> bool:
+async def _send_one(
+    bot: Bot, user_id: int, source_chat_id: int, source_message_id: int, text_only_content: str | None = None
+) -> bool:
     for attempt in range(2):
         try:
-            await bot.copy_message(chat_id=user_id, from_chat_id=source_chat_id, message_id=source_message_id)
+            if text_only_content is not None:
+                await bot.send_message(
+                    user_id, text_only_content, link_preview_options=LinkPreviewOptions(is_disabled=True)
+                )
+            else:
+                await bot.copy_message(chat_id=user_id, from_chat_id=source_chat_id, message_id=source_message_id)
             return True
         except TelegramRetryAfter as e:
             await asyncio.sleep(e.retry_after)
