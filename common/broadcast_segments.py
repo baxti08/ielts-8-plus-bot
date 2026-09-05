@@ -8,6 +8,7 @@ MID_FUNNEL_THRESHOLD = len(GATED_SECTIONS) * REFERRALS_PER_SLOT  # 12 = 4 sectio
 
 SEGMENTS = {
     "all": "Barcha foydalanuvchilar",
+    "custom_ids": "Faqat tanlangan ID'lar",
     "mid_funnel": f"{MID_FUNNEL_THRESHOLD} tadan kam taklif qilganlar (hali funnel ichida)",
     "unsubscribed": "Hozir barcha kanallarga a'zo bo'lmaganlar",
     "no_listening": "Listening hali olmaganlar",
@@ -37,9 +38,16 @@ def parse_exclude_ids(raw: str) -> list[int]:
 
 
 async def get_target_user_ids(
-    session: AsyncSession, segment: str, exclude_ids: list[int] | None = None
+    session: AsyncSession, segment: str, exclude_ids: list[int] | None = None, include_ids: list[int] | None = None
 ) -> list[int]:
-    if segment == "all":
+    if segment == "custom_ids":
+        # Only send to exactly these Telegram IDs -- and only ones that have
+        # actually started the bot before (real users), since a raw ID with
+        # no chat history would just fail to send anyway. exclude_ids still
+        # applies on top, in case someone pastes an include list that
+        # overlaps with someone they also want to skip.
+        stmt = select(User.telegram_id).where(User.telegram_id.in_(include_ids or []))
+    elif segment == "all":
         stmt = select(User.telegram_id).where(User.telegram_id > 0)
     elif segment == "unsubscribed":
         stmt = select(User.telegram_id).where(User.telegram_id > 0, User.is_verified_member.is_(False))

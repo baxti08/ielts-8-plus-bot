@@ -82,6 +82,7 @@ async def send_broadcast(
     segment: str = Form(...),
     message_text: str = Form(""),
     exclude_ids: str = Form(""),
+    include_ids: str = Form(""),
     media: UploadFile | None = None,
     session: AsyncSession = Depends(get_session),
     admin: str = Depends(require_admin),
@@ -98,8 +99,12 @@ async def send_broadcast(
     if not message_text and (media is None or not media.filename):
         return RedirectResponse(url="/broadcast?error=empty", status_code=303)
 
+    included = parse_exclude_ids(include_ids)
+    if segment == "custom_ids" and not included:
+        return RedirectResponse(url="/broadcast?error=no_ids", status_code=303)
+
     excluded = parse_exclude_ids(exclude_ids)
-    target_ids = await get_target_user_ids(session, segment, exclude_ids=excluded)
+    target_ids = await get_target_user_ids(session, segment, exclude_ids=excluded, include_ids=included)
 
     bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     try:

@@ -42,6 +42,7 @@ def _is_admin(user_id: int) -> bool:
 
 class BroadcastStates(StatesGroup):
     choosing_segment = State()
+    typing_include_ids = State()
     typing_excludes = State()
     typing_message = State()
     confirming = State()
@@ -136,12 +137,40 @@ async def _get_running_broadcast(message: Message) -> BroadcastLog | None:
 async def cb_choose_segment(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     segment = callback.data.split(":", 1)[1]
     await state.update_data(segment=segment)
-    await state.set_state(BroadcastStates.typing_excludes)
     await callback.answer()
+
+    if segment == "custom_ids":
+        await state.set_state(BroadcastStates.typing_include_ids)
+        await callback.message.edit_text(
+            "🎯 Faqat qaysi foydalanuvchilarga yuborilsin? Telegram ID'larini vergul bilan kiriting "
+            "(masalan: 806124512, 431228526):"
+        )
+        return
+
+    await state.set_state(BroadcastStates.typing_excludes)
     await callback.message.edit_text(
         f"👥 Tanlandi: <b>{SEGMENTS[segment]}</b>\n\n"
         "Istisno qilinadigan foydalanuvchilar bormi? Telegram ID'larini vergul bilan kiriting "
         "(masalan: 806124512, 431228526), yoki hech kimni istisno qilmaslik uchun \"yo'q\" deb yozing:"
+    )
+
+
+@router.message(StateFilter(BroadcastStates.typing_include_ids), F.from_user.id.in_(settings.admin_id_list))
+async def receive_include_ids(message: Message, state: FSMContext, session: AsyncSession):
+    include_ids = parse_exclude_ids(message.text or "")
+    if not include_ids:
+        await message.answer(
+            "⚠️ Hech qanday to'g'ri Telegram ID topilmadi. Iltimos, ID'larni vergul bilan qayta kiriting:"
+        )
+        return
+
+    target_ids = await get_target_user_ids(session, "custom_ids", include_ids=include_ids)
+    await state.update_data(include_ids=include_ids, target_count=len(target_ids))
+    await state.set_state(BroadcastStates.typing_message)
+    await message.answer(
+        f"🎯 Tanlandi: <b>Faqat tanlangan ID'lar</b> ({len(target_ids)} ta topildi, {len(include_ids)} ta kiritilgan edi)\n\n"
+        "Endi xabar yuboring — matn, rasm, video yoki ovozli xabar bo'lishi mumkin "
+        "(HTML formatlash qo'llab-quvvatlanadi):"
     )
 
 
@@ -221,7 +250,9 @@ async def cb_confirm(callback: CallbackQuery, state: FSMContext, session: AsyncS
         await state.clear()
         return
 
-    target_ids = await get_target_user_ids(session, segment, exclude_ids=data.get("exclude_ids"))
+    target_ids = await get_target_user_ids(
+        session, segment, exclude_ids=data.get("exclude_ids"), include_ids=data.get("include_ids")
+    )
     log = BroadcastLog(
         segment=segment,
         message_text=message_text,
