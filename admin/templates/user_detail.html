@@ -48,6 +48,21 @@
   </p>
 </div>
 
+<div class="card">
+  <h2>Reset</h2>
+  {% if reset_done %}
+    <p style="color:#63d17c;">✅ Reset qilindi. Keyingi /start da bot unga yangi foydalanuvchidek munosabatda bo'ladi.</p>
+  {% endif %}
+  <p style="color:#9aa2ad;font-size:13px;">
+    Foydalanuvchi butunlay yangidek bo'ladi: kanallarni qayta tekshiradi, takliflari 0 ga tushadi, ochilgan bo'limlari yopiladi.
+    Uni taklif qilgan do'sti o'z ballini saqlab qoladi.
+  </p>
+  <form method="post" action="/users/{{ user.telegram_id }}/reset"
+        onsubmit="return confirm('{{ user.telegram_id }} ni reset qilasizmi? Buni ortga qaytarib bo\'lmaydi.');">
+    <button type="submit" class="danger">♻️ Reset qilish</button>
+  </form>
+</div>
+
 <h2 class="section-title">Yuborilgan referrallar</h2>
 <div class="card">
   <table>

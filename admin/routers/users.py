@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from admin.auth import require_admin
 from admin.deps import get_session, templates
 from admin.direct_message import send_direct_message
-from common.admin_ops import manual_add_points, manual_revoke_points
+from common.admin_ops import manual_add_points, manual_revoke_points, reset_user
 from common.db.models import AdminAction, Referral, User
 from common.referral_logic import active_unlocked_sections, referral_progress
 
@@ -69,6 +69,7 @@ async def user_detail(
             "unlocked": unlocked,
             "sent_referrals": sent_referrals,
             "message_result": request.query_params.get("message_result"),
+            "reset_done": request.query_params.get("reset") == "done",
         },
     )
 
@@ -112,3 +113,15 @@ async def message_user(
 
     result = "sent" if success else f"failed:{error}"
     return RedirectResponse(url=f"/users/{user_id}?message_result={result}", status_code=303)
+
+
+@router.post("/{user_id}/reset")
+async def reset_user_route(
+    user_id: int,
+    session: AsyncSession = Depends(get_session),
+    admin: str = Depends(require_admin),
+):
+    if user_id > 0 and await session.get(User, user_id) is not None:
+        await reset_user(session, admin, user_id)
+        await session.commit()
+    return RedirectResponse(url=f"/users/{user_id}?reset=done", status_code=303)

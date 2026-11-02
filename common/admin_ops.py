@@ -104,3 +104,60 @@ async def manual_revoke_points(
         )
     )
     return revoked_ids
+
+
+async def reset_user(session: AsyncSession, admin_username: str, target_user_id: int) -> dict:
+    """
+    Make one user brand new again. On their next /start the bot treats them
+    exactly like a first-time user (channel gate, 0 invites, locked sections).
+
+    - Their unlocked sections and lesson history are deleted.
+    - Invites THEY made are deleted: those friends stay in the bot but no
+      longer count for this user (he starts at 0).
+    - If THEY were invited by someone, that invite is kept, so the friend
+      who invited them keeps their point.
+    """
+    from sqlalchemy import delete
+
+    from common.db.models import ContentDelivery, SectionUnlock
+
+    user = await session.get(User, target_user_id)
+    if user is None:
+        raise ValueError(f"User {target_user_id} not found")
+
+    sent = (await session.scalars(select(Referral).where(Referral.referrer_id == target_user_id))).all()
+    manual_ids = []
+    for ref in sent:
+        placeholder = await session.get(User, ref.referred_id)
+        if placeholder is not None and placeholder.telegram_id < 0 and placeholder.username == MANUAL_USERNAME:
+            manual_ids.append(placeholder.telegram_id)
+    await session.execute(delete(Referral).where(Referral.referrer_id == target_user_id))
+    if manual_ids:
+        await session.execute(delete(User).where(User.telegram_id.in_(manual_ids)))
+
+    unlocks = await session.execute(delete(SectionUnlock).where(SectionUnlock.user_id == target_user_id))
+    deliveries = await session.execute(delete(ContentDelivery).where(ContentDelivery.user_id == target_user_id))
+
+    user.start_count = 0  # 0 = treated as a new user on the next /start
+    user.is_verified_member = False
+    user.ever_verified = False
+    user.last_membership_check = None
+    user.landed_via_referrer_id = None
+    user.joined_at = datetime.now(timezone.utc)
+
+    summary = {
+        "invites_removed": len(sent),
+        "sections_relocked": unlocks.rowcount or 0,
+        "lesson_history_removed": deliveries.rowcount or 0,
+    }
+    session.add(
+        AdminAction(
+            admin_username=admin_username,
+            action_type="reset_user",
+            target_user_id=target_user_id,
+            old_value=None,
+            new_value=json.dumps(summary),
+            created_at=datetime.now(timezone.utc),
+        )
+    )
+    return summary

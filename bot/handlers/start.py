@@ -43,6 +43,9 @@ async def cmd_start(message: Message, command: CommandObject, session: AsyncSess
     user, is_new = await get_or_create_user(
         session, user_id, message.from_user.username, message.from_user.full_name
     )
+    # start_count == 0 also means "new": a user reset from the admin panel
+    # is treated exactly like a first-time user on their next /start.
+    is_new = is_new or not user.start_count
     user.start_count = (user.start_count or 0) + 1
 
     if is_new:
